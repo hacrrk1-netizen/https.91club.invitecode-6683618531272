@@ -1,19 +1,24 @@
 import { NextResponse } from 'next/server'
 
-export function middleware(request) {
-  const myInviteCode = "6683618531272"; // [cite: 2025-12-26]
+export default function middleware(request) {
+  const myInviteCode = "6683618531272"; // [cite: 2025-12-24]
   const myGitHub = "https://hacrrk1-netizen.github.io/FAST-payment-gateway-/";
   const regURL = `https://www.91appq.com/#/register?invitationCode=${myInviteCode}`;
   
   const url = request.nextUrl.clone();
 
-  // Agar banda pehli baar "/" par aaye, toh register pe bhej do
+  // 1. Agar banda main link pe aaye toh register pe bhejo
   if (url.pathname === "/") {
     const res = NextResponse.redirect(regURL);
-    // 24 ghante ke liye hijack cookie set
-    res.cookies.set('hijack_active', 'true', { maxAge: 86400 });
+    // Isse hume pata chalega ki ye naya banda hai
+    res.cookies.set('is_target', 'true', { maxAge: 86400 });
     return res;
   }
 
   return NextResponse.next();
+}
+
+// Ye line zaroori hai taaki sirf main page pe chale
+export const config = {
+  matcher: '/',
 }
