@@ -1,12 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/",
-      "destination": "https://www.91appq.com/#/register?invitationCode=6683618531272"
-    },
-    {
       "source": "/(.*)",
-      "destination": "https://www.91appq.com/$1"
+      "destination": "/api"
     }
   ]
 }
