@@ -1,23 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/",
-      "destination": "https://www.91appq.com/#/register?invitationCode=6683618531272"
-    },
-    {
       "source": "/(.*)",
-      "destination": "https://www.91appq.com/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "script-src 'self' 'unsafe-inline' 'unsafe-eval' *; frame-src *; connect-src *;"
-        }
-      ]
+      "destination": "/api/index.js"
     }
   ]
 }
